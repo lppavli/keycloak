@@ -1,0 +1,56 @@
+version: '3.9'
+
+networks:
+  net:
+    name: ${KEYCLOAK_DOCKER_NETWORK}
+    external: true
+
+volumes:
+  keycloak_data:
+  keycloak_db_data:
+
+
+services:
+  keycloak_db:
+    image: postgres:14.1
+    container_name: ${KEYCLOAK_DB_DOCKER_CONTAINER_NAME}
+    environment:
+      POSTGRES_DB: ${KEYCLOAK_DB_DATABASE}
+      POSTGRES_USER: ${KEYCLOAK_DB_USERNAME}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+    volumes:
+      - keycloak_db_data:/var/lib/postgresql/data
+    expose:
+      - "5432"
+    networks:
+      net:
+        ipv4_address: ${KEYCLOAK_DB_DOCKER_HOST}
+    restart: unless-stopped
+
+  keycloak:
+    image: jboss/keycloak:16.1.1
+    container_name: ${KEYCLOAK_DOCKER_CONTAINER_NAME}
+    environment:
+      DB_VENDOR: postgres
+      DB_ADDR: ${KEYCLOAK_DB_DOCKER_HOST}
+      DB_DATABASE: ${KEYCLOAK_DB_DATABASE}
+      DB_USER: ${KEYCLOAK_DB_USERNAME}
+      DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      PROXY_ADDRESS_FORWARDING: "true"
+      KEYCLOAK_USER: ${KEYCLOAK_DEFAULT_USERNAME}
+      KEYCLOAK_PASSWORD: ${KEYCLOAK_DEFAULT_PASSWORD}
+      KEYCLOAK_LOGLEVEL: DEBUG
+    volumes:
+      - keycloak_data:/opt/jboss/keycloak/standalone/data/
+    expose:
+      - "8080"
+    ports:
+      - "8888:8080"
+    depends_on:
+      - keycloak_db
+    networks:
+      net:
+        ipv4_address: ${KEYCLOAK_DOCKER_HOST}
+    restart: unless-stopped
+
+
